@@ -77,7 +77,7 @@
       <parent link="base_link"/>
       <child link="${name}"/>
       <origin xyz="${x} ${y} 0.0"/>
-      <axis xyz="0 0 1"/>
+      <axis xyz="0 1 0"/>
       <dynamics damping="0.1" friction="0.0"/>
     </joint>
   </xacro:macro>
@@ -227,28 +227,26 @@
 <!--Lidar Gazebo-->
 
       <gazebo reference="lidar_link">
-    <sensor type="ray" name="lidar">
-      <pose>0 0 0 0 0 0</pose>
-      <update_rate>20</update_rate>
-      <ray>
-        <scan>
-          <horizontal>
-            <samples>720</samples>
-            <min_angle>-3.14159</min_angle>
-            <max_angle>3.14159</max_angle>
-          </horizontal>
-        </scan>
-        <range>
-          <min>0.05</min>
-          <max>6.0</max>
-        </range>
-      </ray>
-      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_laser.so">
-        <topicName>/scan</topicName>
-        <frameName>lidar_link</frameName>
-      </plugin>
-    </sensor>
-  </gazebo>
+  <sensor name="lidar" type="gpu_lidar">
+    <pose>0 0 0 0 0 0</pose>
+    <update_rate>20</update_rate>
+    <ray>
+      <scan>
+        <horizontal>
+          <samples>720</samples>
+          <min_angle>-3.14159</min_angle>
+          <max_angle>3.14159</max_angle>
+        </horizontal>
+      </scan>
+      <range>
+        <min>0.05</min>
+        <max>6.0</max>
+      </range>
+    </ray>
+    <topic>/scan</topic>
+  </sensor>
+</gazebo>
+
 
   <!-- Wheels Friction Gazebo -->
   <gazebo reference="front_left_wheel">
@@ -303,35 +301,46 @@
   </gazebo>
 
   <gazebo>
-  <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
-    <leftJoint>front_left_wheel_joint back_left_wheel_joint</leftJoint>
-    <rightJoint>front_right_wheel_joint back_right_wheel_joint</rightJoint>
+  <plugin
+    filename="gz-sim-diff-drive-system"
+    name="gz::sim::systems::DiffDrive">
 
-    <wheelSeparation>0.30</wheelSeparation>
-    <wheelDiameter>0.06</wheelDiameter>
+    <left_joint>front_left_wheel_joint</left_joint>
+    <left_joint>back_left_wheel_joint</left_joint>
 
-    <robotBaseFrame>base_link</robotBaseFrame>
-    <odomFrame>odom</odomFrame>
+    <right_joint>front_right_wheel_joint</right_joint>
+    <right_joint>back_right_wheel_joint</right_joint>
 
-    <topicName>cmd_vel</topicName>
-    <odometryTopic>odom</odometryTopic>
+    <wheel_separation>0.30</wheel_separation>
+    <wheel_radius>0.03</wheel_radius>
+
+    <odom_publish_frequency>50</odom_publish_frequency>
+    <topic>cmd_vel</topic>
+    <odom_topic>odom</odom_topic>
+    <frame_id>odom</frame_id>
+    <child_frame_id>base_link</child_frame_id>
   </plugin>
 </gazebo>
 
 <gazebo reference="camera_link">
-  <sensor type="camera" name="camera">
+  <sensor name="camera" type="camera">
+    <pose>0 0 0 0 0 0</pose>
     <camera>
       <horizontal_fov>1.047</horizontal_fov>
       <image>
         <width>640</width>
         <height>480</height>
+        <format>R8G8B8</format>
       </image>
+      <clip>
+        <near>0.1</near>
+        <far>100</far>
+      </clip>
     </camera>
-    <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
-      <frameName>camera_link</frameName>
-    </plugin>
+    <topic>/camera/image</topic>
   </sensor>
 </gazebo>
+
 
 
 </robot>
