@@ -77,7 +77,8 @@
       <parent link="base_link"/>
       <child link="${name}"/>
       <origin xyz="${x} ${y} 0.0"/>
-      <axis xyz="0 1 0"/>
+      <axis xyz="0 0 1"/>
+      <dynamics damping="0.1" friction="0.0"/>
     </joint>
   </xacro:macro>
 
@@ -251,21 +252,45 @@
 
   <!-- Wheels Friction Gazebo -->
   <gazebo reference="front_left_wheel">
-    <mu1>1.2</mu1>
-    <mu2>1.2</mu2>
-  </gazebo>
+  <surface>
+    <friction>
+      <ode>
+        <mu>1.2</mu>
+        <mu2>1.2</mu2>
+      </ode>
+    </friction>
+  </surface>
+</gazebo>
   <gazebo reference="front_right_wheel">
-    <mu1>1.2</mu1>
-    <mu2>1.2</mu2>
-  </gazebo>
+  <surface>
+    <friction>
+      <ode>
+        <mu>1.2</mu>
+        <mu2>1.2</mu2>
+      </ode>
+    </friction>
+  </surface>
+</gazebo>
   <gazebo reference="back_left_wheel">
-    <mu1>1.2</mu1>
-    <mu2>1.2</mu2>
-  </gazebo>
+  <surface>
+    <friction>
+      <ode>
+        <mu>1.2</mu>
+        <mu2>1.2</mu2>
+      </ode>
+    </friction>
+  </surface>
+</gazebo>
   <gazebo reference="back_right_wheel">
-    <mu1>1.2</mu1>
-    <mu2>1.2</mu2>
-  </gazebo>
+  <surface>
+    <friction>
+      <ode>
+        <mu>1.2</mu>
+        <mu2>1.2</mu2>
+      </ode>
+    </friction>
+  </surface>
+</gazebo>
 
   <!-- Gripper Friction Gazebo -->
   <gazebo reference="left_gripper_wheel">
@@ -276,5 +301,37 @@
     <mu1>1.2</mu1>
     <mu2>1.2</mu2>
   </gazebo>
+
+  <gazebo>
+  <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+    <leftJoint>front_left_wheel_joint back_left_wheel_joint</leftJoint>
+    <rightJoint>front_right_wheel_joint back_right_wheel_joint</rightJoint>
+
+    <wheelSeparation>0.30</wheelSeparation>
+    <wheelDiameter>0.06</wheelDiameter>
+
+    <robotBaseFrame>base_link</robotBaseFrame>
+    <odomFrame>odom</odomFrame>
+
+    <topicName>cmd_vel</topicName>
+    <odometryTopic>odom</odometryTopic>
+  </plugin>
+</gazebo>
+
+<gazebo reference="camera_link">
+  <sensor type="camera" name="camera">
+    <camera>
+      <horizontal_fov>1.047</horizontal_fov>
+      <image>
+        <width>640</width>
+        <height>480</height>
+      </image>
+    </camera>
+    <plugin name="gazebo_ros_camera" filename="libgazebo_ros_camera.so">
+      <frameName>camera_link</frameName>
+    </plugin>
+  </sensor>
+</gazebo>
+
 
 </robot>
