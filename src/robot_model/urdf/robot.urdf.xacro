@@ -121,39 +121,77 @@
         <limit lower="0.0" upper="0.03" effort="50" velocity="2"/>
     </joint>
 
-    <!-- Left Gripper -->
-    <link name="left_gripper_wheel">
+      <!-- ================= GRIPPER MACRO ================= -->
+    <xacro:macro name="gripper" params="name x y yaw">
+      <link name="${name}">
         <visual>
-            <geometry>
+          <origin rpy="1.5708 0 0"/>
+          <geometry>
             <cylinder radius="0.015" length="0.03"/>
-            </geometry>
-            <material name="black"/>
+          </geometry>
+          <material name="black">
+            <color rgba="0 0 0 1"/>
+          </material>
         </visual>
-    </link>
 
-    <joint name="left_gripper_joint" type="continuous">
-        <parent link="base_link"/>
-        <child link="left_gripper_wheel"/>
-        <origin xyz="0.2 0.04 0.04"/>
-        <axis xyz="0 1 0"/>
-    </joint>
-
-    <!-- Right Gripper -->
-    <link name="right_gripper_wheel">
-        <visual>
-            <geometry>
+        <collision>
+          <origin rpy="1.5708 0 0"/>
+          <geometry>
             <cylinder radius="0.015" length="0.03"/>
-            </geometry>
-            <material name="black"/>
-        </visual>
-    </link>
+          </geometry>
+        </collision>
 
-    <joint name="right_gripper_joint" type="continuous">
+        <inertial>
+          <mass value="0.05"/>
+          <inertia
+            ixx="0.00002" ixy="0" ixz="0"
+            iyy="0.00002" iyz="0"
+            izz="0.00002"/>
+        </inertial>
+      </link>
+
+      <joint name="${name}_joint" type="continuous">
         <parent link="base_link"/>
-        <child link="right_gripper_wheel"/>
-        <origin xyz="0.2 -0.04 0.04"/>
+        <child link="${name}"/>
+        <origin xyz="${x} ${y} 0.04" rpy="0 0 ${yaw}"/>
         <axis xyz="0 1 0"/>
-    </joint>
+      </joint>
+    </xacro:macro>
+
+      <!-- ================= GRIPPERS ================= -->
+    <xacro:gripper name="left_gripper_wheel"  x="0.2"  y="0.05" yaw="-0.3"/>
+    <xacro:gripper name="right_gripper_wheel" x="0.2"  y="-0.05" yaw="0.3"/>
+
+  <!-- ================= LIDAR ================= -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.03" length="0.03"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder radius="0.03" length="0.03"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="0.1"/>
+      <inertia
+        ixx="0.0001" ixy="0" ixz="0"
+        iyy="0.0001" iyz="0"
+        izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.115" rpy="0 0 0"/>
+  </joint>
+
 
     <!-- Gazebo Condition -->
   <gazebo reference="base_link">
@@ -184,5 +222,59 @@
   <gazebo reference="right_gripper_wheel">
     <selfCollide>false</selfCollide>
     </gazebo>
+
+<!--Lidar Gazebo-->
+
+      <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar">
+      <pose>0 0 0 0 0 0</pose>
+      <update_rate>20</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>720</samples>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.05</min>
+          <max>6.0</max>
+        </range>
+      </ray>
+      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_laser.so">
+        <topicName>/scan</topicName>
+        <frameName>lidar_link</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- Wheels Friction Gazebo -->
+  <gazebo reference="front_left_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
+  <gazebo reference="front_right_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
+  <gazebo reference="back_left_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
+  <gazebo reference="back_right_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
+
+  <!-- Gripper Friction Gazebo -->
+  <gazebo reference="left_gripper_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
+  <gazebo reference="right_gripper_wheel">
+    <mu1>1.2</mu1>
+    <mu2>1.2</mu2>
+  </gazebo>
 
 </robot>
