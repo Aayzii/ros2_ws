@@ -224,28 +224,29 @@
     <selfCollide>false</selfCollide>
     </gazebo>
 
-<!--Lidar Gazebo-->
+    <gazebo reference="lidar_link">
+      <sensor name="lidar" type="gpu_lidar">
+        <pose>0 0 0 0 0 0</pose>
+        <update_rate>20</update_rate>
 
-      <gazebo reference="lidar_link">
-  <sensor name="lidar" type="gpu_lidar">
-    <pose>0 0 0 0 0 0</pose>
-    <update_rate>20</update_rate>
-    <ray>
-      <scan>
-        <horizontal>
-          <samples>720</samples>
-          <min_angle>-3.14159</min_angle>
-          <max_angle>3.14159</max_angle>
-        </horizontal>
-      </scan>
-      <range>
-        <min>0.05</min>
-        <max>6.0</max>
-      </range>
-    </ray>
-    <topic>/scan</topic>
-  </sensor>
-</gazebo>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>720</samples>
+              <min_angle>-3.14159</min_angle>
+              <max_angle>3.14159</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>0.05</min>
+            <max>6.0</max>
+          </range>
+        </lidar>
+
+        <!-- Gazebo transport topic -->
+        <topic>/scan</topic>
+      </sensor>
+    </gazebo>
 
 
   <!-- Wheels Friction Gazebo -->

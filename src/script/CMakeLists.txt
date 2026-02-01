@@ -9,6 +9,8 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -22,7 +24,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-add_executable(talker src/talker.cpp)
+add_executable(talker function/talker.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 
 install(TARGETS
@@ -30,7 +32,7 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(listener src/listener.cpp)
+add_executable(listener function/listener.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
 
 install(TARGETS
@@ -38,5 +40,18 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+add_executable(ball_chase function/ball_chase.cpp)
+
+ament_target_dependencies(
+  ball_chase
+  rclcpp
+  sensor_msgs
+  geometry_msgs
+)
+
+install(TARGETS
+  ball_chase
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

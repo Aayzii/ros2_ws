@@ -26,6 +26,7 @@ endif()
 install(
   DIRECTORY
     models
+    launch
   DESTINATION share/${PROJECT_NAME}
 )
 

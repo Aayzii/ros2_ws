@@ -40,7 +40,7 @@ def generate_launch_description():
 
         gazebo,
 
-        # 🟢 Robot State Publisher
+        # Robot State Publisher
         Node(
             package='robot_state_publisher',
             executable='robot_state_publisher',
@@ -51,7 +51,7 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # 🟢 Spawn robot into Gazebo
+        # Spawn robot into Gazebo
         Node(
             package='ros_gz_sim',
             executable='create',
@@ -65,7 +65,7 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # 🟢 Bridge Gazebo ↔ ROS 2
+        # Bridge Gazebo ↔ ROS 2
         Node(
             package='ros_gz_bridge',
             executable='parameter_bridge',
@@ -78,16 +78,14 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # 🟢 Keyboard Teleop
-        Node(
-            package='teleop_twist_keyboard',
-            executable='teleop_twist_keyboard',
-            name='teleop_keyboard',
-            prefix='xterm -e',   # opens in its own terminal
-            output='screen'
-        ),
+#        Node(
+#            package='teleop_twist_keyboard',
+#            executable='teleop_twist_keyboard',
+#            name='teleop_keyboard',
+#            prefix='xterm -e',   # opens in its own terminal
+#           output='screen'
+#        ),
 
-        # ⚽ Spawn soccer ball
         Node(
             package='ros_gz_sim',
             executable='create',
