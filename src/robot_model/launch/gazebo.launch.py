@@ -38,7 +38,6 @@ def generate_launch_description():
 
     return LaunchDescription([
 
-        # 🟢 Start Gazebo Harmonic
         gazebo,
 
         # 🟢 Robot State Publisher
@@ -78,4 +77,30 @@ def generate_launch_description():
             ],
             output='screen'
         ),
+
+        # 🟢 Keyboard Teleop
+        Node(
+            package='teleop_twist_keyboard',
+            executable='teleop_twist_keyboard',
+            name='teleop_keyboard',
+            prefix='xterm -e',   # opens in its own terminal
+            output='screen'
+        ),
+
+        # ⚽ Spawn soccer ball
+        Node(
+            package='ros_gz_sim',
+            executable='create',
+            arguments=[
+                '-name', 'soccer_ball',
+                '-file',
+                os.path.join(
+                    get_package_share_directory('gazebo_world'),
+                    'models/soccer_ball.sdf'
+                )
+            ],
+            output='screen'
+        ),
+
+
     ])
