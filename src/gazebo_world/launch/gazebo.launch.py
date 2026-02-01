@@ -1,28 +1,45 @@
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch.substitutions import Command
+
+from launch.substitutions import (
+    Command,
+    FindExecutable,
+    PathJoinSubstitution,
+    TextSubstitution
+)
+from launch_ros.substitutions import FindPackageShare
+
 from ament_index_python.packages import get_package_share_directory
 import os
 
 
 def generate_launch_description():
 
-    pkg_name = 'robot_model'
-    pkg_share = get_package_share_directory(pkg_name)
+    # -------------------------
+    # Robot description (XACRO)
+    # -------------------------
+    xacro_file = PathJoinSubstitution([
+        FindPackageShare('robot_model'),
+        'urdf',
+        'robot.urdf.xacro'
+    ])
 
-    # Path to xacro
-    xacro_file = os.path.join(pkg_share, 'urdf', 'robot.urdf.xacro')
-
-    # Process xacro the ROS 2 way
     robot_description = ParameterValue(
-        Command(['xacro ', xacro_file]),
+        Command([
+            FindExecutable(name='xacro'),
+            TextSubstitution(text=' '),   # 🔴 THIS SPACE IS CRITICAL
+            xacro_file
+        ]),
         value_type=str
     )
 
-    # --- Gazebo Harmonic (empty world, no CLI prompt) ---
+    # -------------------------
+    # Gazebo Fortress
+    # -------------------------
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -36,69 +53,66 @@ def generate_launch_description():
         }.items(),
     )
 
+    # -------------------------
+    # Nodes
+    # -------------------------
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='screen',
+        parameters=[{
+            'robot_description': robot_description,
+            'use_sim_time': True
+        }]
+    )
+
+    spawn_robot = Node(
+        package='ros_gz_sim',
+        executable='create',
+        output='screen',
+        arguments=[
+            '-name', 'soccer_bot',
+            '-topic', 'robot_description',   # ✅ THIS IS THE KEY
+            '-x', '0',
+            '-y', '0',
+            '-z', '0.1'
+        ]
+    )
+
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        output='screen',
+        arguments=[
+            '/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+            '/odom@nav_msgs/msg/Odometry@gz.msgs.Odometry',
+            '/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
+            '/camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
+        ]
+    )
+
+    spawn_ball = Node(
+        package='ros_gz_sim',
+        executable='create',
+        output='screen',
+        arguments=[
+            '-name', 'soccer_ball',
+            '-file',
+            os.path.join(
+                get_package_share_directory('gazebo_world'),
+                'models',
+                'soccer_ball.sdf'
+            )
+        ]
+    )
+
+    # -------------------------
+    # Launch description
+    # -------------------------
     return LaunchDescription([
-
         gazebo,
-
-        # Robot State Publisher
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            parameters=[{
-                'robot_description': robot_description,
-                'use_sim_time': True
-            }],
-            output='screen'
-        ),
-
-        # Spawn robot into Gazebo
-        Node(
-            package='ros_gz_sim',
-            executable='create',
-            arguments=[
-                '-name', 'soccer_bot',
-                '-topic', 'robot_description',
-                '-x', '0',
-                '-y', '0',
-                '-z', '0.1'
-            ],
-            output='screen'
-        ),
-
-        # Bridge Gazebo ↔ ROS 2
-        Node(
-            package='ros_gz_bridge',
-            executable='parameter_bridge',
-            arguments=[
-                '/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
-                '/odom@nav_msgs/msg/Odometry@gz.msgs.Odometry',
-                '/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
-                '/camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
-            ],
-            output='screen'
-        ),
-
-#        Node(
-#            package='teleop_twist_keyboard',
-#            executable='teleop_twist_keyboard',
-#            name='teleop_keyboard',
-#            prefix='xterm -e',   # opens in its own terminal
-#           output='screen'
-#        ),
-
-        Node(
-            package='ros_gz_sim',
-            executable='create',
-            arguments=[
-                '-name', 'soccer_ball',
-                '-file',
-                os.path.join(
-                    get_package_share_directory('gazebo_world'),
-                    'models/soccer_ball.sdf'
-                )
-            ],
-            output='screen'
-        ),
-
-
+        robot_state_publisher,
+        spawn_robot,
+        bridge,
+        spawn_ball
     ])
