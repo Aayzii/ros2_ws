@@ -5,12 +5,20 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+# Find Dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
+
+
+# Executables and libraries
+add_executable(talker function/talker.cpp)
+add_executable(ball_detector function/ball_detector.cpp)
+add_executable(listener function/listener.cpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -24,7 +32,6 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-add_executable(talker function/talker.cpp)
 ament_target_dependencies(talker rclcpp std_msgs)
 
 install(TARGETS
@@ -32,7 +39,6 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(listener function/listener.cpp)
 ament_target_dependencies(listener rclcpp std_msgs)
 
 install(TARGETS
@@ -40,17 +46,19 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-add_executable(ball_chase function/ball_chase.cpp)
-
-ament_target_dependencies(
-  ball_chase
+ament_target_dependencies(ball_detector
   rclcpp
   sensor_msgs
-  geometry_msgs
+  cv_bridge
+)
+
+# OpenCV is NOT an ament package
+target_link_libraries(ball_detector
+  ${OpenCV_LIBRARIES}
 )
 
 install(TARGETS
-  ball_chase
+  ball_detector
   DESTINATION lib/${PROJECT_NAME}
 )
 
