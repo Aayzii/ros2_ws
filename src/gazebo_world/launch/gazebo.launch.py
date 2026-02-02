@@ -72,10 +72,10 @@ def generate_launch_description():
         output='screen',
         arguments=[
             '-name', 'soccer_bot',
-            '-topic', 'robot_description',   # ✅ THIS IS THE KEY
+            '-topic', 'robot_description',
             '-x', '0',
             '-y', '0',
-            '-z', '0.1'
+            '-z', '0.2'
         ]
     )
 
@@ -102,7 +102,17 @@ def generate_launch_description():
                 get_package_share_directory('gazebo_world'),
                 'models',
                 'soccer_ball.sdf'
-            )
+            ),
+
+            # --- Pose ---
+            '-x', '1.0',     # forward (meters)
+            '-y', '0.0',     # left (meters)
+            '-z', '0.05',    # height (meters)
+
+            # Optional orientation (radians)
+            '-R', '0.0',     # roll
+            '-P', '0.0',     # pitch
+            '-Y', '0.0',     # yaw
         ]
     )
 
