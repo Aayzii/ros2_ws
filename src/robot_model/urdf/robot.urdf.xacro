@@ -44,6 +44,50 @@
     </inertial>
   </link>
 
+  <!-- IMU LINK -->
+  <link name="imu_link">
+    <visual>
+      <geometry>
+        <box size="0.01 0.01 0.01"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    
+    <collision>
+      <geometry>
+        <box size="0.01 0.01 0.01"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="0.01"/>
+      <inertia
+        ixx="1e-5" ixy="0" ixz="0"
+        iyy="1e-5" iyz="0"
+        izz="1e-5"/>
+    </inertial>
+  </link>
+
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0.137"/>
+  </joint>
+
+  <!-- IR SENSOR LINK -->
+  <link name="ir_link">
+    <inertial>
+      <mass value="0.005"/>
+      <inertia ixx="1e-6" iyy="1e-6" izz="1e-6"/>
+    </inertial>
+  </link>
+
+  <joint name="ir_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ir_link"/>
+    <origin xyz="0.22 0 0.03"/>
+  </joint>
+
   <!-- ================= WHEEL MACRO ================= -->
   <xacro:macro name="wheel" params="name x y">
     <link name="${name}">
@@ -234,6 +278,9 @@
   <gazebo reference="lidar_link">
     <selfCollide>false</selfCollide>
     </gazebo>
+  <gazebo reference="imu_link">
+    <selfCollide>false</selfCollide>
+    </gazebo>
 
     <!-- LIDAR Sensor -->
     <gazebo reference="lidar_link">
@@ -324,6 +371,9 @@
     <plugin
       filename="gz-sim-sensors-system"
       name="gz::sim::systems::Sensors"/>
+    <plugin
+      filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu"/>
 </gazebo>
 
 <!-- Gazebo Sensor for Camera -->
@@ -347,6 +397,51 @@
       </camera>
 
       <topic>/camera/image</topic>
+    </sensor>
+  </gazebo>
+
+  <!-- Gazebo Sensor for IMU -->
+  <gazebo reference="base_link">
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <visualize>false</visualize>
+      <topic>/imu/data</topic>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.00001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.00001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.00001</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0</mean><stddev>0.001</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0</mean><stddev>0.001</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0</mean><stddev>0.001</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
+
+  <!-- Gazebo Sensor for IR -->
+  <gazebo reference="ir_link">
+    <sensor name="ir_sensor" type="gpu_lidar">
+      <always_on>true</always_on>
+      <update_rate>50</update_rate>
+      <topic>/ir/beam</topic>
+
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>1</samples>
+            <min_angle>0</min_angle>
+            <max_angle>0</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.01</min>
+          <max>0.15</max>
+        </range>
+      </lidar>
     </sensor>
   </gazebo>
 

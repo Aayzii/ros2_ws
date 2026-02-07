@@ -17,7 +17,8 @@ find_package(OpenCV REQUIRED)
 
 # Executables and libraries
 add_executable(talker function/talker.cpp)
-add_executable(ball_detector function/ball_detector.cpp)
+add_executable(ball_chase function/ball_chase.cpp)
+add_executable(image_viewer function/image_viewer.cpp)
 add_executable(listener function/listener.cpp)
 
 if(BUILD_TESTING)
@@ -46,19 +47,35 @@ install(TARGETS
   DESTINATION lib/${PROJECT_NAME}
 )
 
-ament_target_dependencies(ball_detector
+ament_target_dependencies(ball_chase
   rclcpp
   sensor_msgs
   cv_bridge
 )
 
 # OpenCV is NOT an ament package
-target_link_libraries(ball_detector
+target_link_libraries(ball_chase
   ${OpenCV_LIBRARIES}
 )
 
 install(TARGETS
-  ball_detector
+  ball_chase
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Image Viewer
+ament_target_dependencies(image_viewer
+  rclcpp
+  sensor_msgs
+  cv_bridge
+)
+
+target_link_libraries(image_viewer
+  ${OpenCV_LIBRARIES}
+)
+
+install(TARGETS
+  image_viewer
   DESTINATION lib/${PROJECT_NAME}
 )
 

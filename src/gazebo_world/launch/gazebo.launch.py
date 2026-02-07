@@ -31,7 +31,7 @@ def generate_launch_description():
     robot_description = ParameterValue(
         Command([
             FindExecutable(name='xacro'),
-            TextSubstitution(text=' '),   # 🔴 THIS SPACE IS CRITICAL
+            TextSubstitution(text=' '),
             xacro_file
         ]),
         value_type=str
@@ -88,6 +88,8 @@ def generate_launch_description():
             '/odom@nav_msgs/msg/Odometry@gz.msgs.Odometry',
             '/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
             '/camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
+            '/imu/data@sensor_msgs/msg/Imu@ignition.msgs.IMU',
+            '/ir/beam@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
         ]
     )
 
