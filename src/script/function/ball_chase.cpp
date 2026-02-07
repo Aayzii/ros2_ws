@@ -3,6 +3,7 @@
 #include <geometry_msgs/msg/twist.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
+#include <cstdlib>
 
 using std::placeholders::_1;
 
@@ -50,6 +51,31 @@ public:
         param_callback_handle_ = this->add_on_set_parameters_callback(
             std::bind(&BallChaser::onParametersChange, this, _1));
 
+        // Detect whether an X/Wayland display is available (WSLg or X forwarding).
+        gui_enabled_ = (std::getenv("DISPLAY") != nullptr) || (std::getenv("WAYLAND_DISPLAY") != nullptr);
+
+        if (gui_enabled_) {
+            // Initialize GUI trackbar values from declared parameters
+            gui_low_h_ = this->get_parameter("hsv_lower_h").as_int();
+            gui_low_s_ = this->get_parameter("hsv_lower_s").as_int();
+            gui_low_v_ = this->get_parameter("hsv_lower_v").as_int();
+            gui_high_h_ = this->get_parameter("hsv_upper_h").as_int();
+            gui_high_s_ = this->get_parameter("hsv_upper_s").as_int();
+            gui_high_v_ = this->get_parameter("hsv_upper_v").as_int();
+
+            cv::namedWindow("HSV Controls", cv::WINDOW_AUTOSIZE);
+            cv::createTrackbar("LowH", "HSV Controls", &gui_low_h_, 179);
+            cv::createTrackbar("HighH", "HSV Controls", &gui_high_h_, 179);
+            cv::createTrackbar("LowS", "HSV Controls", &gui_low_s_, 255);
+            cv::createTrackbar("HighS", "HSV Controls", &gui_high_s_, 255);
+            cv::createTrackbar("LowV", "HSV Controls", &gui_low_v_, 255);
+            cv::createTrackbar("HighV", "HSV Controls", &gui_high_v_, 255);
+
+            RCLCPP_INFO(this->get_logger(), "HSV GUI enabled (DISPLAY available)");
+        } else {
+            RCLCPP_INFO(this->get_logger(), "No DISPLAY found — running headless (use ros2 params to tune)");
+        }
+
         RCLCPP_INFO(this->get_logger(), "Ball chaser node started");
         RCLCPP_INFO(this->get_logger(), "\n========== HSV TUNING ==========");
         RCLCPP_INFO(this->get_logger(), "Use these commands to adjust HSV values in real-time:");
@@ -87,13 +113,31 @@ private:
             return;
         }
 
-        // Get current HSV parameters
-        int lower_h = this->get_parameter("hsv_lower_h").as_int();
-        int lower_s = this->get_parameter("hsv_lower_s").as_int();
-        int lower_v = this->get_parameter("hsv_lower_v").as_int();
-        int upper_h = this->get_parameter("hsv_upper_h").as_int();
-        int upper_s = this->get_parameter("hsv_upper_s").as_int();
-        int upper_v = this->get_parameter("hsv_upper_v").as_int();
+        // Get current HSV parameters (prefer GUI values when available)
+        int lower_h, lower_s, lower_v, upper_h, upper_s, upper_v;
+        if (gui_enabled_) {
+            lower_h = gui_low_h_;
+            lower_s = gui_low_s_;
+            lower_v = gui_low_v_;
+            upper_h = gui_high_h_;
+            upper_s = gui_high_s_;
+            upper_v = gui_high_v_;
+
+            // Mirror GUI values to ROS parameters so tooling stays in sync
+            this->set_parameter(rclcpp::Parameter("hsv_lower_h", lower_h));
+            this->set_parameter(rclcpp::Parameter("hsv_lower_s", lower_s));
+            this->set_parameter(rclcpp::Parameter("hsv_lower_v", lower_v));
+            this->set_parameter(rclcpp::Parameter("hsv_upper_h", upper_h));
+            this->set_parameter(rclcpp::Parameter("hsv_upper_s", upper_s));
+            this->set_parameter(rclcpp::Parameter("hsv_upper_v", upper_v));
+        } else {
+            lower_h = this->get_parameter("hsv_lower_h").as_int();
+            lower_s = this->get_parameter("hsv_lower_s").as_int();
+            lower_v = this->get_parameter("hsv_lower_v").as_int();
+            upper_h = this->get_parameter("hsv_upper_h").as_int();
+            upper_s = this->get_parameter("hsv_upper_s").as_int();
+            upper_v = this->get_parameter("hsv_upper_v").as_int();
+        }
 
         cv::Mat hsv, mask;
         cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
@@ -111,6 +155,12 @@ private:
         auto mask_msg = cv_bridge::CvImage(msg->header, "mono8", mask).toImageMsg();
         mask_pub_->publish(*mask_msg);
 
+        if (gui_enabled_) {
+            cv::imshow("Frame", frame);
+            cv::imshow("Mask", mask);
+            cv::waitKey(1);
+        }
+
         std::vector<std::vector<cv::Point>> contours;
         cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
@@ -118,7 +168,7 @@ private:
 
         if (contours.empty()) {
             // 🔄 Search
-            cmd.angular.z = 0.4;
+            cmd.angular.z = 0.0;
             cmd.linear.x = 0.0;
             cmd_pub_->publish(cmd);
             return;
@@ -154,6 +204,9 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mask_pub_;
     rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
+    // GUI-controlled HSV values (used only if a display is available)
+    int gui_low_h_, gui_high_h_, gui_low_s_, gui_high_s_, gui_low_v_, gui_high_v_;
+    bool gui_enabled_ = false;
 };
 
 int main(int argc, char **argv)
