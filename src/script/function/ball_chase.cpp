@@ -4,6 +4,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/opencv.hpp>
 #include <cstdlib>
+#include <std_msgs/msg/int32_multi_array.hpp>
 
 using std::placeholders::_1;
 
@@ -16,67 +17,27 @@ public:
             "/camera/image", 10,
             std::bind(&BallChaser::imageCallback, this, _1));
 
+        // Subscribe to HSV values published by HSV_finder node
+        hsv_sub_ = this->create_subscription<std_msgs::msg::Int32MultiArray>(
+            "/ball_chase/hsv", 10,
+            std::bind(&BallChaser::hsvCallback, this, _1));
+
         cmd_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
             "/cmd_vel", 10);
 
         mask_pub_ = this->create_publisher<sensor_msgs::msg::Image>(
             "/ball_chase/mask", 10);
 
-        // Declare HSV parameters with callbacks for real-time tuning
-        rcl_interfaces::msg::ParameterDescriptor lower_h_desc;
-        lower_h_desc.description = "HSV Lower Hue (0-180)";
-        this->declare_parameter("hsv_lower_h", 5, lower_h_desc);
+        // initialize default HSV thresholds; these will be overwritten
+        // when HSV_finder publishes values on /ball_chase/hsv
+        lower_h_ = 5;
+        lower_s_ = 120;
+        lower_v_ = 70;
+        upper_h_ = 15;
+        upper_s_ = 255;
+        upper_v_ = 255;
 
-        rcl_interfaces::msg::ParameterDescriptor lower_s_desc;
-        lower_s_desc.description = "HSV Lower Saturation (0-255)";
-        this->declare_parameter("hsv_lower_s", 120, lower_s_desc);
-
-        rcl_interfaces::msg::ParameterDescriptor lower_v_desc;
-        lower_v_desc.description = "HSV Lower Value (0-255)";
-        this->declare_parameter("hsv_lower_v", 70, lower_v_desc);
-
-        rcl_interfaces::msg::ParameterDescriptor upper_h_desc;
-        upper_h_desc.description = "HSV Upper Hue (0-180)";
-        this->declare_parameter("hsv_upper_h", 15, upper_h_desc);
-
-        rcl_interfaces::msg::ParameterDescriptor upper_s_desc;
-        upper_s_desc.description = "HSV Upper Saturation (0-255)";
-        this->declare_parameter("hsv_upper_s", 255, upper_s_desc);
-
-        rcl_interfaces::msg::ParameterDescriptor upper_v_desc;
-        upper_v_desc.description = "HSV Upper Value (0-255)";
-        this->declare_parameter("hsv_upper_v", 255, upper_v_desc);
-
-        // Set up parameter change callback
-        param_callback_handle_ = this->add_on_set_parameters_callback(
-            std::bind(&BallChaser::onParametersChange, this, _1));
-
-        // Detect whether an X/Wayland display is available (WSLg or X forwarding).
-        gui_enabled_ = (std::getenv("DISPLAY") != nullptr) || (std::getenv("WAYLAND_DISPLAY") != nullptr);
-
-        if (gui_enabled_) {
-            // Initialize GUI trackbar values from declared parameters
-            gui_low_h_ = this->get_parameter("hsv_lower_h").as_int();
-            gui_low_s_ = this->get_parameter("hsv_lower_s").as_int();
-            gui_low_v_ = this->get_parameter("hsv_lower_v").as_int();
-            gui_high_h_ = this->get_parameter("hsv_upper_h").as_int();
-            gui_high_s_ = this->get_parameter("hsv_upper_s").as_int();
-            gui_high_v_ = this->get_parameter("hsv_upper_v").as_int();
-
-            cv::namedWindow("HSV Controls", cv::WINDOW_AUTOSIZE);
-            cv::createTrackbar("LowH", "HSV Controls", &gui_low_h_, 179);
-            cv::createTrackbar("HighH", "HSV Controls", &gui_high_h_, 179);
-            cv::createTrackbar("LowS", "HSV Controls", &gui_low_s_, 255);
-            cv::createTrackbar("HighS", "HSV Controls", &gui_high_s_, 255);
-            cv::createTrackbar("LowV", "HSV Controls", &gui_low_v_, 255);
-            cv::createTrackbar("HighV", "HSV Controls", &gui_high_v_, 255);
-
-            RCLCPP_INFO(this->get_logger(), "HSV GUI enabled (DISPLAY available)");
-        } else {
-            RCLCPP_INFO(this->get_logger(), "No DISPLAY found — running headless (use ros2 params to tune)");
-        }
-
-        RCLCPP_INFO(this->get_logger(), "Ball chaser node started");
+        RCLCPP_INFO(this->get_logger(), "Ball chaser node started (subscribing to /ball_chase/hsv)");
         RCLCPP_INFO(this->get_logger(), "\n========== HSV TUNING ==========");
         RCLCPP_INFO(this->get_logger(), "Use these commands to adjust HSV values in real-time:");
         RCLCPP_INFO(this->get_logger(), "  ros2 param set /ball_chaser hsv_lower_h 5");
@@ -89,18 +50,18 @@ public:
     }
 
 private:
-    rcl_interfaces::msg::SetParametersResult onParametersChange(
-        const std::vector<rclcpp::Parameter> &parameters)
+    void hsvCallback(const std_msgs::msg::Int32MultiArray::SharedPtr msg)
     {
-        rcl_interfaces::msg::SetParametersResult result;
-        result.successful = true;
-        for (const auto &param : parameters) {
-            if (param.get_name().find("hsv_") == 0) {
-                RCLCPP_INFO(this->get_logger(), "Parameter '%s' changed to: %s", 
-                    param.get_name().c_str(), param.value_to_string().c_str());
-            }
+        if (msg->data.size() >= 6) {
+            lower_h_ = msg->data[0];
+            lower_s_ = msg->data[1];
+            lower_v_ = msg->data[2];
+            upper_h_ = msg->data[3];
+            upper_s_ = msg->data[4];
+            upper_v_ = msg->data[5];
+            RCLCPP_DEBUG(this->get_logger(), "Received HSV: %d %d %d - %d %d %d",
+                lower_h_, lower_s_, lower_v_, upper_h_, upper_s_, upper_v_);
         }
-        return result;
     }
 
     void imageCallback(const sensor_msgs::msg::Image::SharedPtr msg)
@@ -113,31 +74,13 @@ private:
             return;
         }
 
-        // Get current HSV parameters (prefer GUI values when available)
-        int lower_h, lower_s, lower_v, upper_h, upper_s, upper_v;
-        if (gui_enabled_) {
-            lower_h = gui_low_h_;
-            lower_s = gui_low_s_;
-            lower_v = gui_low_v_;
-            upper_h = gui_high_h_;
-            upper_s = gui_high_s_;
-            upper_v = gui_high_v_;
-
-            // Mirror GUI values to ROS parameters so tooling stays in sync
-            this->set_parameter(rclcpp::Parameter("hsv_lower_h", lower_h));
-            this->set_parameter(rclcpp::Parameter("hsv_lower_s", lower_s));
-            this->set_parameter(rclcpp::Parameter("hsv_lower_v", lower_v));
-            this->set_parameter(rclcpp::Parameter("hsv_upper_h", upper_h));
-            this->set_parameter(rclcpp::Parameter("hsv_upper_s", upper_s));
-            this->set_parameter(rclcpp::Parameter("hsv_upper_v", upper_v));
-        } else {
-            lower_h = this->get_parameter("hsv_lower_h").as_int();
-            lower_s = this->get_parameter("hsv_lower_s").as_int();
-            lower_v = this->get_parameter("hsv_lower_v").as_int();
-            upper_h = this->get_parameter("hsv_upper_h").as_int();
-            upper_s = this->get_parameter("hsv_upper_s").as_int();
-            upper_v = this->get_parameter("hsv_upper_v").as_int();
-        }
+        // Use latest HSV thresholds received from HSV_finder (or defaults)
+        int lower_h = lower_h_;
+        int lower_s = lower_s_;
+        int lower_v = lower_v_;
+        int upper_h = upper_h_;
+        int upper_s = upper_s_;
+        int upper_v = upper_v_;
 
         cv::Mat hsv, mask;
         cv::cvtColor(frame, hsv, cv::COLOR_BGR2HSV);
@@ -203,9 +146,10 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mask_pub_;
-    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_callback_handle_;
-    // GUI-controlled HSV values (used only if a display is available)
-    int gui_low_h_, gui_high_h_, gui_low_s_, gui_high_s_, gui_low_v_, gui_high_v_;
+    rclcpp::Subscription<std_msgs::msg::Int32MultiArray>::SharedPtr hsv_sub_;
+
+    // Stored HSV thresholds (updated from /ball_chase/hsv)
+    int lower_h_, lower_s_, lower_v_, upper_h_, upper_s_, upper_v_;
     bool gui_enabled_ = false;
 };
 

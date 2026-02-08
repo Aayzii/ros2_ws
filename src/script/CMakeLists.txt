@@ -20,6 +20,7 @@ add_executable(talker function/talker.cpp)
 add_executable(ball_chase function/ball_chase.cpp)
 add_executable(image_viewer function/image_viewer.cpp)
 add_executable(listener function/listener.cpp)
+add_executable(hsv_finder function/HSV_finder.cpp)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -60,6 +61,22 @@ target_link_libraries(ball_chase
 
 install(TARGETS
   ball_chase
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+ament_target_dependencies(hsv_finder
+  rclcpp
+  sensor_msgs
+  std_msgs
+  cv_bridge
+)
+
+target_link_libraries(hsv_finder
+  ${OpenCV_LIBRARIES}
+)
+
+install(TARGETS
+  hsv_finder
   DESTINATION lib/${PROJECT_NAME}
 )
 
