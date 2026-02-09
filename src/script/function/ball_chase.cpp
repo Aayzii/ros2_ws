@@ -88,7 +88,7 @@ private:
         cmd.angular.z = -error * 0.002;
 
         if (area < 1500) {
-            cmd.linear.x = 0.25;
+            cmd.linear.x = 0.55;
         } else {
             cmd.linear.x = 0.0;
         }
