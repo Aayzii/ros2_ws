@@ -1,8 +1,0 @@
-ball_chaser:
-  ros__parameters:
-    h_low: 5
-    s_low: 130
-    v_low: 70
-    h_high: 15
-    s_high: 255
-    v_high: 255
