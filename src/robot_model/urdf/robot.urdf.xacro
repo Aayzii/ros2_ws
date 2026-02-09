@@ -80,12 +80,24 @@
       <mass value="0.005"/>
       <inertia ixx="1e-6" iyy="1e-6" izz="1e-6"/>
     </inertial>
+
+    <visual>
+      <geometry>
+        <cylinder radius="0.005" length="0.02"/>
+      </geometry>
+      <material name="green"/>
+    </visual> 
+    <collision>
+      <geometry>
+        <cylinder radius="0.005" length="0.02"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="ir_joint" type="fixed">
     <parent link="base_link"/>
     <child link="ir_link"/>
-    <origin xyz="0.22 0 0.03"/>
+    <origin xyz="0.22 0 0.049"/>
   </joint>
 
   <!-- ================= WHEEL MACRO ================= -->
@@ -281,6 +293,9 @@
   <gazebo reference="imu_link">
     <selfCollide>false</selfCollide>
     </gazebo>
+  <gazebo reference="ir_link">
+    <selfCollide>false</selfCollide>
+    </gazebo>
 
     <!-- LIDAR Sensor -->
     <gazebo reference="lidar_link">
@@ -439,7 +454,7 @@
         </scan>
         <range>
           <min>0.01</min>
-          <max>0.15</max>
+          <max>0.02</max>
         </range>
       </lidar>
     </sensor>
